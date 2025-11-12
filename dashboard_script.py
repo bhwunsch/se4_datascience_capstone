@@ -10,9 +10,11 @@ import plotly.express as px
 spacex_df = pd.read_csv("spacex_launch_dash.csv")
 max_payload = spacex_df['Payload Mass (kg)'].max()
 min_payload = spacex_df['Payload Mass (kg)'].min()
+launch_sites = spacex_df["Launch Site"].unique()
 
 # Create a dash application
 app = dash.Dash(__name__)
+
 
 # Create an app layout
 app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
@@ -35,7 +37,11 @@ app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
 
                                 # TASK 2: Add a pie chart to show the total successful launches count for all sites
                                 # If a specific launch site was selected, show the Success vs. Failed counts for the site
-                                html.Div(dcc.Graph(id='success-pie-chart')),
+                                html.Div(
+                                    dcc.Graph(
+                                        id='success-pie-chart',
+                                        )
+                                    ),
                                 html.Br(),
 
                                 html.P("Payload range (Kg):"),
@@ -48,6 +54,32 @@ app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
 
 # TASK 2:
 # Add a callback function for `site-dropdown` as input, `success-pie-chart` as output
+# Function decorator to specify function input and output
+@app.callback(Output(component_id='success-pie-chart', component_property='figure'),
+              Input(component_id='site-dropdown', component_property='value'))
+def get_pie_chart(entered_site):
+    filtered_df = spacex_df
+    if entered_site == 'ALL':
+        data = filtered_df
+        fig = px.pie(data, values='class', 
+        names='Launch Site', 
+        title='title')
+        return fig
+    else:
+        site_df = spacex_df[spacex_df['Launch Site'] == entered_site]
+        df_counts = (
+            site_df['class']
+            .value_counts()
+            .reindex([0, 1], fill_value=0)
+            .rename_axis('class')
+            .reset_index(name='count')
+        )
+        df_counts['label'] = df_counts['class'].map({0: 'Failure', 1: 'Success'})
+        fig = px.pie(df_counts, values='count', names='class',
+                        title=f'Success vs Failure ({entered_site})')
+        return fig
+        # return the outcomes piechart for a selected site
+
 
 # TASK 4:
 # Add a callback function for `site-dropdown` and `payload-slider` as inputs, `success-payload-scatter-chart` as output
